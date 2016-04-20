@@ -1,0 +1,127 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "ZKCluster": {
+      "Type": "AWS::ECS::Cluster"
+    },
+    "ZKService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": "ZKAutoScale",
+      "Properties": {
+        "Cluster": {
+          "Ref": "ZKCluster"
+        },
+        "DesiredCount": 1,
+        "Role": "ecsServiceRole",
+        "TaskDefinition": "zookeeper:1",
+        "LoadBalancers": [
+          {
+            "ContainerName": "zookeeper",
+            "ContainerPort": 2181,
+            "LoadBalancerName": {
+              "Ref": "ZKLoadBalancer"
+            }
+          }
+        ]
+      }
+    },
+    "ZKLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "Listeners": [
+          {
+            "InstancePort": 2181,
+            "LoadBalancerPort": 2181,
+            "Protocol": "tcp"
+          }
+        ]
+      }
+    },
+    "ZKSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "ZK Cluster Security Group"
+      }
+    },
+    "ZKSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {
+          "Ref": "ZKSecurityGroup"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "2181",
+        "FromPort": "2181",
+        "CidrIp": "172.31.0.0/16"
+      }
+    },
+    "ZKAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "LaunchConfigurationName": {
+          "Ref": "ZKLaunchConfig"
+        },
+        "MinSize": "1",
+        "MaxSize": "1",
+        "LoadBalancerNames": [
+          {
+            "Ref": "ZKLoadBalancer"
+          }
+        ]
+      }
+    },
+    "ZKLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": "zookeeper",
+        "ImageId": "ami-67a3a90d",
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash\n",
+                "echo ECS_CLUSTER=",
+                {
+                  "Ref": "ZKCluster"
+                },
+                " >> /etc/ecs/ecs.config\n"
+              ]
+            ]
+          }
+        },
+        "InstanceType": "t2.small"
+      }
+    }
+  },
+  "Outputs": {
+    "ZKTask": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "arn:aws:ecs:",
+            {
+              "Ref": "AWS::Region"
+            },
+            ":",
+            {
+              "Ref": "AWS::AccountId"
+            },
+            ":task-definition/",
+            {
+              "Ref": "ZKCluster"
+            },
+            ":1"
+          ]
+        ]
+      }
+    }
+  }
+}
