@@ -1,0 +1,90 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "ZKAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "VPCZoneIdentifier": [
+          "subnet-4eb52273",
+          "subnet-14a3553e",
+          "subnet-7d2cd625",
+          "subnet-ed0aaa9b"
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "ZKLaunchConfig"
+        },
+        "MinSize": "1",
+        "MaxSize": "1",
+        "LoadBalancerNames": [
+          {
+            "Ref": "ZKLoadBalancer"
+          }
+        ]
+      }
+    },
+    "ZKLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": "zookeeper",
+        "SecurityGroups": {
+          "Ref": "ZKSecurityGroup"
+        },
+        "ImageId": "ami-67a3a90d",
+        "AssociatePublicIpAddress": "true",
+        "InstanceType": "t2.small",
+        "IamInstanceProfile": "ecsInstanceRole"
+      }
+    },
+    "ZKLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "Listeners": [
+          {
+            "InstancePort": 2181,
+            "LoadBalancerPort": 2181,
+            "Protocol": "tcp"
+          }
+        ]
+      }
+    },
+    "ZKSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "ZK Cluster Security Group",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "ToPort": "2181",
+            "FromPort": "2181",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "URL": {
+      "Description": "The URL of the load balancer",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "http://",
+            {
+              "Fn::GetAtt": [
+                "ZKLoadBalancer",
+                "DNSName"
+              ]
+            }
+          ]
+        ]
+      }
+    }
+  }
+}

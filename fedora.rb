@@ -50,9 +50,9 @@ CloudFormation do
   #######
   # ZK
   #######
-  Resource('ZKCluster') do
-    Type 'AWS::ECS::Cluster'
-  end
+  # Resource('ZKCluster') do
+  #   Type 'AWS::ECS::Cluster'
+  # end
   # Resource('ZKTask') do
   #   Type 'AWS::ECS::TaskDefinition'
   #   Property('ContainerDefinitions',
@@ -68,20 +68,68 @@ CloudFormation do
   #         Protocol: 'tcp' }]
   #     }])
   # end
-  Resource('ZKService') do
-    Type 'AWS::ECS::Service'
-    DependsOn(['ZKAutoScale','ZKCluster'])
-    Property('Cluster', Ref('ZKCluster'))
-    Property('DesiredCount', 1)
-    Property('Role', 'ecsServiceRole')
-#    Property('TaskDefinition', FnJoin('', ['arn:aws:ecs:', Ref('AWS::Region'), ':', Ref('AWS::AccountId'), ':task-definition/', Ref('ZKCluster'), ':1']))
-    Property('TaskDefinition', 'zookeeper:1')
-    Property('LoadBalancers',
-      [{
-        ContainerName: 'zookeeper',
-        ContainerPort: 2181,
-        LoadBalancerName: Ref('ZKLoadBalancer')
-      }])
+  # Resource('ZKServiceRole') do
+  #   Type('AWS::IAM::Role')
+  #   Property('AssumeRolePolicyDocument', {
+  #     'Statement' => [{
+  #       'Action'    => ['sts:AssumeRole'],
+  #       'Effect'    => 'Allow',
+  #       'Principal' => {
+  #         'Service' => ['ec2.amazonaws.com']
+  #       }
+  #     }]
+  #   })
+  #   Property('Path', '/')
+  # end
+  # Resource('ZKServiceRolePolicy') do
+  #   Type('AWS::IAM::Policy')
+  #   Property('PolicyName', 'ZKecsServiceRole')
+  #   Property('PolicyDocument', {
+  #     'Statement' => [{
+  #       'Action'   => '*',
+  #       'Effect'   => 'Allow',
+  #       'Resource' => '*'
+  #     }]
+  #   })
+  #   Property('Roles', [ Ref('ZKServiceRole')])
+  # end
+  # Resource('ZKService') do
+  #   Type 'AWS::ECS::Service'
+  #   DependsOn(['ZKAutoScale','ZKCluster'])
+  #   Property('Cluster', Ref('ZKCluster'))
+  #   Property('DesiredCount', 1)
+  #   Property('Role', 'ecsServiceRole')
+  #   # Property('TaskDefinition', FnJoin('', ['arn:aws:ecs:', Ref('AWS::Region'), ':', Ref('AWS::AccountId'), ':task-definition/', Ref('ZKCluster'), ':1']))
+  #   Property('TaskDefinition', 'zookeeper:1')
+  #   Property('LoadBalancers',
+  #     [{
+  #       ContainerName: 'zookeeper',
+  #       ContainerPort: 2181,
+  #       LoadBalancerName: Ref('ZKLoadBalancer')
+  #     }])
+  # end
+  Resource('ZKAutoScale') do
+    Type('AWS::AutoScaling::AutoScalingGroup')
+    Property('AvailabilityZones', FnGetAZs(''))
+    Property('VPCZoneIdentifier', ['subnet-4eb52273', 'subnet-14a3553e', 'subnet-7d2cd625', 'subnet-ed0aaa9b'])
+    Property('LaunchConfigurationName', Ref('ZKLaunchConfig'))
+    Property('MinSize', '1')
+    Property('MaxSize', '1')
+    Property('LoadBalancerNames', [ Ref('ZKLoadBalancer')])
+  end
+  Resource('ZKLaunchConfig') do
+    Type('AWS::AutoScaling::LaunchConfiguration')
+    Property('KeyName', 'zookeeper')
+    Property('SecurityGroups', [Ref('ZKSecurityGroup')])
+    Property('ImageId', 'ami-67a3a90d')
+    Property('AssociatePublicIpAddress', 'true')
+  #   Property('UserData', FnBase64(FnJoin('', [
+  # "#!/bin/bash\n",
+  # "echo ECS_CLUSTER=",
+  # Ref('ZKCluster'),
+  # " >> /etc/ecs/ecs.config\n"])))
+    Property('InstanceType', 't2.small')
+    Property('IamInstanceProfile', 'ecsInstanceRole')
   end
   Resource('ZKLoadBalancer') do
     Type('AWS::ElasticLoadBalancing::LoadBalancer')
@@ -96,33 +144,13 @@ CloudFormation do
   Resource('ZKSecurityGroup') do
     Type('AWS::EC2::SecurityGroup')
     Property('GroupDescription', 'ZK Cluster Security Group')
-  end
-  Resource('ZKSecurityGroupIngress') do
-    Type('AWS::EC2::SecurityGroupIngress')
-    Property('GroupName', Ref('ZKSecurityGroup'))
-    Property('IpProtocol', 'tcp')
-    Property('ToPort', '2181')
-    Property('FromPort', '2181')
-    Property('CidrIp', '172.31.0.0/16')
-  end
-  Resource('ZKAutoScale') do
-    Type('AWS::AutoScaling::AutoScalingGroup')
-    Property('AvailabilityZones', FnGetAZs(''))
-    Property('LaunchConfigurationName', Ref('ZKLaunchConfig'))
-    Property('MinSize', '1')
-    Property('MaxSize', '1')
-    Property('LoadBalancerNames', [ Ref('ZKLoadBalancer')])
-  end
-  Resource('ZKLaunchConfig') do
-    Type('AWS::AutoScaling::LaunchConfiguration')
-    Property('KeyName', 'zookeeper')
-    Property('ImageId', 'ami-67a3a90d')
-    Property('UserData', FnBase64(FnJoin('', [
-  "#!/bin/bash\n",
-  "echo ECS_CLUSTER=",
-  Ref('ZKCluster'),
-  " >> /etc/ecs/ecs.config\n"])))
-    Property('InstanceType', 't2.small')
+    Property('SecurityGroupIngress',
+      [{
+        'IpProtocol' => 'tcp',
+        'ToPort' => '2181',
+        'FromPort' => '2181',
+        'CidrIp' => '0.0.0.0/0'
+      }])
   end
 
   # Output('FedoraURL') do
@@ -131,7 +159,11 @@ CloudFormation do
   # Output('ZKTaskDef') do
   #   Value(Ref('ZKTask'))
   # end
-  Output('ZKTask') do
-    Value(FnJoin('', ['arn:aws:ecs:', Ref('AWS::Region'), ':', Ref('AWS::AccountId'), ':task-definition/', Ref('ZKCluster'), ':1']))
+  # Output('ZKTask') do
+  #   Value(FnJoin('', ['arn:aws:ecs:', Ref('AWS::Region'), ':', Ref('AWS::AccountId'), ':task-definition/', Ref('ZKCluster'), ':1']))
+  # end
+  Output('URL') do
+    Description 'The URL of the load balancer'
+    Value FnJoin('', ['http://', FnGetAtt('ZKLoadBalancer', 'DNSName')])
   end
 end

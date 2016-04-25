@@ -67,6 +67,12 @@
         "AvailabilityZones": {
           "Fn::GetAZs": ""
         },
+        "VPCZoneIdentifier": [
+          "subnet-4eb52273",
+          "subnet-14a3553e",
+          "subnet-7d2cd625",
+          "subnet-ed0aaa9b"
+        ],
         "LaunchConfigurationName": {
           "Ref": "ZKLaunchConfig"
         },
@@ -83,7 +89,11 @@
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
         "KeyName": "zookeeper",
+        "SecurityGroups": [
+          "sg-54ae952c"
+        ],
         "ImageId": "ami-67a3a90d",
+        "AssociatePublicIpAddress": "true",
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
@@ -99,7 +109,8 @@
             ]
           }
         },
-        "InstanceType": "t2.small"
+        "InstanceType": "t2.small",
+        "IamInstanceProfile": "ecsInstanceRole"
       }
     }
   },
