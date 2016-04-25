@@ -1,45 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Resources": {
-    "ZKAutoScale": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "Properties": {
-        "AvailabilityZones": {
-          "Fn::GetAZs": ""
-        },
-        "VPCZoneIdentifier": [
-          "subnet-4eb52273",
-          "subnet-14a3553e",
-          "subnet-7d2cd625",
-          "subnet-ed0aaa9b"
-        ],
-        "LaunchConfigurationName": {
-          "Ref": "ZKLaunchConfig"
-        },
-        "MinSize": "1",
-        "MaxSize": "1",
-        "LoadBalancerNames": [
-          {
-            "Ref": "ZKLoadBalancer"
-          }
-        ]
-      }
-    },
-    "ZKLaunchConfig": {
-      "Type": "AWS::AutoScaling::LaunchConfiguration",
-      "Properties": {
-        "KeyName": "zookeeper",
-        "SecurityGroups": [
-          {
-            "Ref": "ZKSecurityGroup"
-          }
-        ],
-        "ImageId": "ami-67a3a90d",
-        "AssociatePublicIpAddress": "true",
-        "InstanceType": "t2.small",
-        "IamInstanceProfile": "ecsInstanceRole"
-      }
-    },
     "ZKLoadBalancer": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
@@ -67,6 +28,43 @@
             "CidrIp": "0.0.0.0/0"
           }
         ]
+      }
+    },
+    "ZKAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "VPCZoneIdentifier": [
+          "subnet-799ad244",
+          "subnet-6c4e0a1a"
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "ZKLaunchConfig"
+        },
+        "MinSize": "1",
+        "MaxSize": "1",
+        "LoadBalancerNames": [
+          {
+            "Ref": "ZKLoadBalancer"
+          }
+        ]
+      }
+    },
+    "ZKLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": "zookeeper",
+        "SecurityGroups": [
+          {
+            "Ref": "ZKSecurityGroup"
+          }
+        ],
+        "ImageId": "ami-67a3a90d",
+        "AssociatePublicIpAddress": "true",
+        "InstanceType": "t2.small",
+        "IamInstanceProfile": "ecsInstanceRole"
       }
     }
   },

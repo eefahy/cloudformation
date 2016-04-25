@@ -108,29 +108,6 @@ CloudFormation do
   #       LoadBalancerName: Ref('ZKLoadBalancer')
   #     }])
   # end
-  Resource('ZKAutoScale') do
-    Type('AWS::AutoScaling::AutoScalingGroup')
-    Property('AvailabilityZones', FnGetAZs(''))
-    Property('VPCZoneIdentifier', ['subnet-4eb52273', 'subnet-14a3553e', 'subnet-7d2cd625', 'subnet-ed0aaa9b'])
-    Property('LaunchConfigurationName', Ref('ZKLaunchConfig'))
-    Property('MinSize', '1')
-    Property('MaxSize', '1')
-    Property('LoadBalancerNames', [ Ref('ZKLoadBalancer')])
-  end
-  Resource('ZKLaunchConfig') do
-    Type('AWS::AutoScaling::LaunchConfiguration')
-    Property('KeyName', 'zookeeper')
-    Property('SecurityGroups', [Ref('ZKSecurityGroup')])
-    Property('ImageId', 'ami-67a3a90d')
-    Property('AssociatePublicIpAddress', 'true')
-  #   Property('UserData', FnBase64(FnJoin('', [
-  # "#!/bin/bash\n",
-  # "echo ECS_CLUSTER=",
-  # Ref('ZKCluster'),
-  # " >> /etc/ecs/ecs.config\n"])))
-    Property('InstanceType', 't2.small')
-    Property('IamInstanceProfile', 'ecsInstanceRole')
-  end
   Resource('ZKLoadBalancer') do
     Type('AWS::ElasticLoadBalancing::LoadBalancer')
     Property('AvailabilityZones', FnGetAZs(''))
@@ -151,6 +128,30 @@ CloudFormation do
         'FromPort' => '2181',
         'CidrIp' => '0.0.0.0/0'
       }])
+  end
+  Resource('ZKAutoScale') do
+    Type('AWS::AutoScaling::AutoScalingGroup')
+    Property('AvailabilityZones', FnGetAZs(''))
+#    Property('VPCZoneIdentifier', ['subnet-4eb52273', 'subnet-14a3553e', 'subnet-7d2cd625', 'subnet-ed0aaa9b'])
+#    Property('VPCZoneIdentifier', ['subnet-799ad244', 'subnet-6c4e0a1a'])
+    Property('LaunchConfigurationName', Ref('ZKLaunchConfig'))
+    Property('MinSize', '1')
+    Property('MaxSize', '1')
+    Property('LoadBalancerNames', [ Ref('ZKLoadBalancer')])
+  end
+  Resource('ZKLaunchConfig') do
+    Type('AWS::AutoScaling::LaunchConfiguration')
+    Property('KeyName', 'zookeeper')
+    Property('SecurityGroups', [Ref('ZKSecurityGroup')])
+    Property('ImageId', 'ami-67a3a90d')
+    Property('AssociatePublicIpAddress', 'true')
+  #   Property('UserData', FnBase64(FnJoin('', [
+  # "#!/bin/bash\n",
+  # "echo ECS_CLUSTER=",
+  # Ref('ZKCluster'),
+  # " >> /etc/ecs/ecs.config\n"])))
+    Property('InstanceType', 't2.small')
+    Property('IamInstanceProfile', 'ecsInstanceRole')
   end
 
   # Output('FedoraURL') do
